@@ -1,5 +1,7 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
+ARG BUILD_ARCH
+ARG TTYD_VERSION=1.7.7
 
 # Tools the agent (and you) commonly need when working on a HA config.
 RUN apt-get update \
@@ -15,8 +17,18 @@ RUN apt-get update \
         python3 \
         python3-yaml \
         tmux \
-        ttyd \
     && rm -rf /var/lib/apt/lists/*
+
+# ttyd (ingress setup console) is not packaged in bookworm: use upstream static build.
+RUN case "${BUILD_ARCH}" in \
+        amd64) ttyd_arch="x86_64" ;; \
+        aarch64) ttyd_arch="aarch64" ;; \
+        *) echo "Unsupported arch ${BUILD_ARCH}" >&2; exit 1 ;; \
+    esac \
+    && curl -fsSL -o /usr/local/bin/ttyd \
+        "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${ttyd_arch}" \
+    && chmod +x /usr/local/bin/ttyd \
+    && /usr/local/bin/ttyd --version
 
 COPY rootfs /
 
