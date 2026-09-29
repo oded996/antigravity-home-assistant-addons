@@ -18,6 +18,12 @@ configuration:
     description: >-
       Regenerate ~/.gemini/AGENTS.md on start with Home Assistant context
       (paths, Supervisor API usage, safety rules).
+  enable_ha_mcp:
+    name: Home Assistant MCP server
+    description: >-
+      Install ha-mcp (github.com/homeassistant-ai/ha-mcp) and register it as
+      the 'home-assistant' MCP server so the agent can query entities, manage
+      automations, dashboards, etc. natively.
   debug:
     name: Debug logging
     description: Log extra diagnostics from the add-on scripts.

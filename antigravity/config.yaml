@@ -1,5 +1,5 @@
 name: Antigravity
-version: "0.1.1"
+version: "0.2.0"
 slug: antigravity
 description: >-
   Run the Google Antigravity agent on your Home Assistant host and drive it
@@ -37,10 +37,12 @@ options:
   mode: daemon
   auto_update: true
   manage_agents_md: true
+  enable_ha_mcp: true
   debug: false
 schema:
   instance_name: str
   mode: list(daemon|interactive)
   auto_update: bool
   manage_agents_md: bool
+  enable_ha_mcp: bool
   debug: bool

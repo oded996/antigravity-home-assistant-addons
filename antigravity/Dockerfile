@@ -30,6 +30,11 @@ RUN case "${BUILD_ARCH}" in \
     && chmod +x /usr/local/bin/ttyd \
     && /usr/local/bin/ttyd --version
 
+# uv: runs ha-mcp (needs Python >= 3.13, bookworm ships 3.11) with a managed Python.
+RUN curl -LsSf https://astral.sh/uv/install.sh \
+        | env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh \
+    && uv --version
+
 COPY rootfs /
 
 RUN chmod +x \

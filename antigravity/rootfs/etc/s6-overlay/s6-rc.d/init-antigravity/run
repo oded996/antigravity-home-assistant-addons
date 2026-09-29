@@ -41,6 +41,48 @@ fi
 
 bashio::log.info "Antigravity CLI: $("${AGY_BIN}" --version 2>/dev/null | head -n1 || echo 'unknown version')"
 
+# --- Home Assistant MCP server (ha-mcp) --------------------------------------
+# https://github.com/homeassistant-ai/ha-mcp  — stdio server, authenticated with
+# the add-on's SUPERVISOR_TOKEN against http://supervisor/core.
+MCP_CONFIG_DIR="${HOME}/.gemini/config"
+MCP_CONFIG="${MCP_CONFIG_DIR}/mcp_config.json"
+HA_MCP_BIN="${UV_TOOL_BIN_DIR}/ha-mcp"
+mkdir -p "${MCP_CONFIG_DIR}"
+[[ -s "${MCP_CONFIG}" ]] && jq -e . "${MCP_CONFIG}" >/dev/null 2>&1 || echo '{"mcpServers":{}}' >"${MCP_CONFIG}"
+
+if bashio::config.true 'enable_ha_mcp'; then
+    if [[ -x "${HA_MCP_BIN}" ]]; then
+        bashio::log.info "Updating ha-mcp ..."
+        uv tool upgrade ha-mcp >/dev/null 2>&1 || bashio::log.warning "ha-mcp upgrade failed; keeping installed version."
+    else
+        bashio::log.info "Installing ha-mcp (first start downloads Python 3.13; this can take a minute) ..."
+        if ! uv tool install --python 3.13 ha-mcp 2>&1 | tail -n 5; then
+            bashio::log.warning "ha-mcp installation failed."
+        fi
+    fi
+
+    if [[ -x "${HA_MCP_BIN}" ]]; then
+        bashio::log.info "ha-mcp: $(uv tool list 2>/dev/null | grep -m1 '^ha-mcp' || echo installed)"
+        tmp="$(mktemp)"
+        jq --arg cmd "${HA_MCP_BIN}" --arg token "${SUPERVISOR_TOKEN}" \
+            '.mcpServers["home-assistant"] = {
+                "command": $cmd,
+                "args": [],
+                "env": {
+                    "HOMEASSISTANT_URL": "http://supervisor/core",
+                    "HOMEASSISTANT_TOKEN": $token
+                }
+            }' "${MCP_CONFIG}" >"${tmp}" && mv "${tmp}" "${MCP_CONFIG}"
+        chmod 600 "${MCP_CONFIG}"
+        bashio::log.info "Registered 'home-assistant' MCP server in ${MCP_CONFIG}"
+    else
+        bashio::log.warning "ha-mcp is not available; the agent will fall back to the REST API."
+    fi
+else
+    tmp="$(mktemp)"
+    jq 'del(.mcpServers["home-assistant"])' "${MCP_CONFIG}" >"${tmp}" && mv "${tmp}" "${MCP_CONFIG}"
+fi
+
 # --- Global rules for the agent ----------------------------------------------
 if bashio::config.true 'manage_agents_md'; then
     ha_version="$(bashio::core.version 2>/dev/null || echo unknown)"
@@ -56,7 +98,9 @@ This file is regenerated on every add-on start; set \`manage_agents_md: false\` 
 - Anything outside these mounts is ephemeral and is lost when the add-on restarts.
 
 ## Talking to Home Assistant
-The environment variable \`SUPERVISOR_TOKEN\` authenticates against:
+Prefer the \`home-assistant\` MCP server tools (ha-mcp) when available: they cover entity states,
+services, automations, scripts, dashboards, helpers, history and more.
+As a fallback, the environment variable \`SUPERVISOR_TOKEN\` authenticates against:
 - Core REST API: \`http://supervisor/core/api/\`
   e.g. \`curl -s -H "Authorization: Bearer \$SUPERVISOR_TOKEN" http://supervisor/core/api/states\`
 - Supervisor API: \`http://supervisor/\`

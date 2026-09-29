@@ -44,6 +44,7 @@ lives in the add-on's `/data` directory and survives restarts and updates.
 | `mode` | `daemon` | `daemon` (headless, always on) or `interactive` (`agy --remote-control` in tmux) |
 | `auto_update` | `true` | Let the CLI self-update |
 | `manage_agents_md` | `true` | Regenerate the global agent rules with Home Assistant context |
+| `enable_ha_mcp` | `true` | Install [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) and register it as the `home-assistant` MCP server (in `~/.gemini/config/mcp_config.json`, other servers you add there are kept) |
 | `debug` | `false` | Verbose add-on script logging |
 
 ## Troubleshooting
