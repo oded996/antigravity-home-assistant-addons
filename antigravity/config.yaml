@@ -1,5 +1,5 @@
 name: Antigravity
-version: "0.1.0"
+version: "0.1.1"
 slug: antigravity
 description: >-
   Run the Google Antigravity agent on your Home Assistant host and drive it
