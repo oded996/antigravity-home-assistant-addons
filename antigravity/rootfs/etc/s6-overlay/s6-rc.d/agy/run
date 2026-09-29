@@ -1,0 +1,137 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Runs the Antigravity Remote Control host.
+#
+# mode=daemon (default)
+#   Uses the documented `agy remote-control start`. That command wants to
+#   register a systemd service, so we run it with a systemctl shim, read the
+#   ExecStart line from the unit file it generated, and exec that command in
+#   the foreground under s6. Falls back to interactive mode if that fails.
+#
+# mode=interactive
+#   Runs `agy --remote-control` inside a detached tmux session (it needs a
+#   TTY). You can attach to it from the Antigravity panel with `agy-attach`.
+# ==============================================================================
+source /usr/local/lib/antigravity/env.sh
+cd "${AGY_WORKSPACE}" || bashio::exit.nok "Workspace ${AGY_WORKSPACE} is missing"
+
+NAME="${AGY_OPT_INSTANCE_NAME:-home-assistant}"
+MODE="${AGY_OPT_MODE:-daemon}"
+RETRY_SECONDS=30
+
+debug() {
+    if [[ "${AGY_OPT_DEBUG:-false}" == "true" ]]; then
+        bashio::log.info "[debug] $*"
+    fi
+}
+
+not_signed_in_notice() {
+    bashio::log.warning "------------------------------------------------------------"
+    bashio::log.warning "Antigravity is not signed in yet."
+    bashio::log.warning "Open the 'Antigravity' panel in the Home Assistant sidebar,"
+    bashio::log.warning "run:  agy-login   and follow the URL + code instructions."
+    bashio::log.warning "This service retries automatically every ${RETRY_SECONDS}s."
+    bashio::log.warning "------------------------------------------------------------"
+}
+
+find_unit_file() {
+    local f
+    for f in \
+        "${XDG_CONFIG_HOME}"/systemd/user/*.service \
+        /etc/systemd/user/*.service \
+        /etc/systemd/system/*.service \
+        /usr/lib/systemd/user/*.service \
+        /lib/systemd/system/*.service; do
+        [[ -f "$f" ]] || continue
+        if grep -q "remote-control daemon" "$f" 2>/dev/null; then
+            echo "$f"
+            return 0
+        fi
+    done
+    return 1
+}
+
+run_interactive() {
+    bashio::log.info "Starting interactive Remote Control session in tmux (session '${AGY_TMUX_SESSION}')."
+    bashio::log.info "Attach from the Antigravity panel with:  agy-attach"
+    agy_ssh_env
+    if ! tmux -L "${AGY_TMUX_SOCKET}" has-session -t "${AGY_TMUX_SESSION}" 2>/dev/null; then
+        tmux -L "${AGY_TMUX_SOCKET}" new-session -d -s "${AGY_TMUX_SESSION}" \
+            -x 200 -y 50 -c "${AGY_WORKSPACE}" \
+            "\"${AGY_BIN}\" --remote-control; echo; echo 'agy exited; restarting in 10s...'; sleep 10"
+        tmux -L "${AGY_TMUX_SOCKET}" set-option -t "${AGY_TMUX_SESSION}" remain-on-exit off >/dev/null
+    fi
+    # Mirror the pane into the add-on log so Remote Control URLs are visible there.
+    local logf="${AGY_STATE_DIR}/interactive.log"
+    : >"${logf}"
+    tmux -L "${AGY_TMUX_SOCKET}" pipe-pane -t "${AGY_TMUX_SESSION}" -o "cat >> '${logf}'"
+    (sleep 20; grep -a -o -E 'https://antigravity\.google\.com/r/[^ [:cntrl:]]+|Hostname: [^[:cntrl:]]+|not enabled for your account[^[:cntrl:]]*' "${logf}" | sort -u | while read -r l; do bashio::log.info "agy: ${l}"; done) &
+    while tmux -L "${AGY_TMUX_SOCKET}" has-session -t "${AGY_TMUX_SESSION}" 2>/dev/null; do
+        sleep 10
+    done
+    bashio::log.warning "Interactive session ended; s6 will restart it."
+    exit 1
+}
+
+if [[ "${MODE}" == "interactive" ]]; then
+    run_interactive
+fi
+
+# --- Daemon mode -------------------------------------------------------------
+bashio::log.info "Registering Remote Control daemon as '${NAME}' ..."
+debug "agy remote-control --help: $("${AGY_BIN}" remote-control --help 2>&1 | tr '\n' ' ' | cut -c1-800)"
+
+start_out="$(PATH="${AGY_SHIM_DIR}:${PATH}" timeout 120 "${AGY_BIN}" remote-control start --name "${NAME}" </dev/null 2>&1)"
+start_rc=$?
+while IFS= read -r line; do
+    [[ -n "$line" ]] && bashio::log.info "agy: ${line}"
+done <<<"${start_out}"
+debug "remote-control start exit code: ${start_rc}"
+
+if grep -qi -E "not signed in|sign in|authentication required|login" <<<"${start_out}" && [[ ${start_rc} -ne 0 ]]; then
+    not_signed_in_notice
+    sleep "${RETRY_SECONDS}"
+    exit 1
+fi
+
+if grep -qi "not enabled for your account" <<<"${start_out}"; then
+    bashio::log.error "Remote Control is not enabled for this Google account."
+    sleep 300
+    exit 1
+fi
+
+unit="$(find_unit_file || true)"
+if [[ -z "${unit}" ]]; then
+    bashio::log.warning "Could not find the unit file written by 'agy remote-control start' (exit ${start_rc})."
+    if [[ -f "${AGY_STATE_DIR}/systemctl-shim.log" ]]; then
+        bashio::log.warning "systemctl calls: $(tail -n 10 "${AGY_STATE_DIR}/systemctl-shim.log" | tr '\n' ';')"
+    fi
+    bashio::log.warning "Falling back to interactive mode."
+    run_interactive
+fi
+
+debug "Unit file: ${unit}"
+debug "$(tr '\n' ' ' <"${unit}")"
+
+# Apply Environment= and WorkingDirectory= from the unit, then exec ExecStart.
+while IFS= read -r env_line; do
+    # shellcheck disable=SC2163
+    for kv in ${env_line}; do export "${kv//\"/}"; done
+done < <(sed -n 's/^Environment=//p' "${unit}")
+
+workdir="$(sed -n 's/^WorkingDirectory=//p' "${unit}" | head -n1)"
+if [[ -n "${workdir}" && "${workdir}" != "~" && -d "${workdir}" ]]; then
+    debug "Unit WorkingDirectory=${workdir} (ignored; using ${AGY_WORKSPACE})"
+fi
+
+exec_start="$(sed -n 's/^ExecStart=//p' "${unit}" | head -n1)"
+if [[ -z "${exec_start}" ]]; then
+    bashio::log.warning "Unit file has no ExecStart; falling back to interactive mode."
+    run_interactive
+fi
+
+bashio::log.info "Starting Remote Control daemon: ${exec_start}"
+bashio::log.info "Find this machine as '${NAME}' at https://antigravity.google.com"
+# shellcheck disable=SC2086
+eval "exec ${exec_start}"

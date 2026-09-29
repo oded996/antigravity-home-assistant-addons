@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# loginctl stand-in (e.g. `loginctl enable-linger`). Always succeeds.
+log="${AGY_STATE_DIR:-/data/addon}/systemctl-shim.log"
+mkdir -p "$(dirname "$log")"
+echo "$(date -Is) loginctl $*" >>"$log"
+case "$1" in
+    show-user) echo "Linger=yes" ;;
+esac
+exit 0

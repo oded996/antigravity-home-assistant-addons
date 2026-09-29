@@ -1,0 +1,47 @@
+# bashrc for the Antigravity ingress console
+source /usr/local/lib/antigravity/env.sh
+agy_ssh_env
+[[ -f /etc/bash.bashrc ]] && source /etc/bash.bashrc
+
+agy-login() {
+    echo "Starting 'agy' to sign in. Open the printed URL in your browser, sign in,"
+    echo "then paste the code back here. When the prompt appears, type /exit."
+    echo
+    "${AGY_BIN}" "$@"
+    echo
+    echo "Signed in? The Remote Control service picks this up within ~30 seconds."
+    echo "Check with: agy-status"
+}
+
+agy-attach() {
+    if tmux -L "${AGY_TMUX_SOCKET}" has-session -t "${AGY_TMUX_SESSION}" 2>/dev/null; then
+        echo "Attaching to the interactive session. Detach with Ctrl-b then d."
+        sleep 1
+        TMUX= tmux -L "${AGY_TMUX_SOCKET}" attach -t "${AGY_TMUX_SESSION}"
+    else
+        echo "No interactive session running (mode is probably 'daemon'). Try: agy-status"
+    fi
+}
+
+agy-logs() {
+    ls -1t "${HOME}"/.gemini/antigravity-cli/log/*.log 2>/dev/null | head -n1 | xargs -r tail -n "${1:-100}"
+}
+
+PS1='\[\e[38;5;75m\]antigravity\[\e[0m\]:\w\$ '
+
+cat <<'EOF'
+
+  ┌──────────────────────────────────────────────────────────────┐
+  │  Antigravity for Home Assistant — setup console              │
+  └──────────────────────────────────────────────────────────────┘
+  This console is only for sign-in and troubleshooting. Use the agent at
+  https://antigravity.google.com (Remote Control) with the same Google account.
+
+    agy-login    Sign in to Antigravity (first run only)
+    agy-status   Remote Control / sign-in status
+    agy-attach   Attach to the interactive session (mode: interactive)
+    agy-logs     Show the latest CLI log
+
+EOF
+agy-status --brief 2>/dev/null || true
+echo

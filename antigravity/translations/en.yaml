@@ -1,0 +1,23 @@
+configuration:
+  instance_name:
+    name: Instance name
+    description: >-
+      How this Home Assistant host appears in the Antigravity Remote Control
+      instance list at antigravity.google.com.
+  mode:
+    name: Mode
+    description: >-
+      daemon = always-on headless Remote Control host (recommended).
+      interactive = runs `agy --remote-control` in a tmux session you can
+      attach to from the panel; use this if daemon mode does not work.
+  auto_update:
+    name: Auto-update CLI
+    description: Let the Antigravity CLI update itself in the background.
+  manage_agents_md:
+    name: Manage agent rules
+    description: >-
+      Regenerate ~/.gemini/AGENTS.md on start with Home Assistant context
+      (paths, Supervisor API usage, safety rules).
+  debug:
+    name: Debug logging
+    description: Log extra diagnostics from the add-on scripts.

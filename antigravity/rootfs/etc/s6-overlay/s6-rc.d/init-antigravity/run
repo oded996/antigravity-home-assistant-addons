@@ -1,0 +1,75 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# One-time setup on every add-on start:
+#  - persist add-on options for non-bashio scripts
+#  - prepare HOME in /data
+#  - install the Antigravity CLI (agy) if missing
+#  - write global agent rules describing the Home Assistant environment
+# ==============================================================================
+source /usr/local/lib/antigravity/env.sh
+
+mkdir -p "${HOME}" "${AGY_BIN_DIR}" "${AGY_STATE_DIR}" "${XDG_CONFIG_HOME}" \
+    "${XDG_CACHE_HOME}" "${XDG_DATA_HOME}" "${XDG_RUNTIME_DIR}" \
+    "${HOME}/.gemini"
+chmod 700 "${XDG_RUNTIME_DIR}"
+
+# Some service managers probe this to decide whether systemd is "booted".
+mkdir -p /run/systemd/system
+
+# --- Options -----------------------------------------------------------------
+cat >"${AGY_STATE_DIR}/options.env" <<EOF
+export AGY_OPT_INSTANCE_NAME=$(printf '%q' "$(bashio::config 'instance_name')")
+export AGY_OPT_MODE=$(printf '%q' "$(bashio::config 'mode')")
+export AGY_OPT_AUTO_UPDATE=$(printf '%q' "$(bashio::config 'auto_update')")
+export AGY_OPT_DEBUG=$(printf '%q' "$(bashio::config 'debug')")
+EOF
+# shellcheck disable=SC1091
+source "${AGY_STATE_DIR}/options.env"
+
+# --- Install agy -------------------------------------------------------------
+if [[ ! -x "${AGY_BIN}" ]]; then
+    bashio::log.info "Installing Antigravity CLI into ${AGY_BIN_DIR} ..."
+    if ! curl -fsSL https://antigravity.google/cli/install.sh | bash -s -- --dir "${AGY_BIN_DIR}"; then
+        bashio::exit.nok "Failed to install the Antigravity CLI. Check network access to antigravity.google."
+    fi
+fi
+
+if [[ ! -x "${AGY_BIN}" ]]; then
+    bashio::exit.nok "Antigravity CLI not found at ${AGY_BIN} after install."
+fi
+
+bashio::log.info "Antigravity CLI: $("${AGY_BIN}" --version 2>/dev/null | head -n1 || echo 'unknown version')"
+
+# --- Global rules for the agent ----------------------------------------------
+if bashio::config.true 'manage_agents_md'; then
+    ha_version="$(bashio::core.version 2>/dev/null || echo unknown)"
+    cat >"${HOME}/.gemini/AGENTS.md" <<EOF
+# Home Assistant environment (managed by the Antigravity add-on)
+
+You are running inside a Home Assistant add-on container on the user's Home Assistant host.
+This file is regenerated on every add-on start; set \`manage_agents_md: false\` to edit it yourself.
+
+- Home Assistant Core version: ${ha_version}
+- Home Assistant configuration directory: \`/config\` (read/write). \`configuration.yaml\` lives here.
+- Other mounts: \`/share\` (rw), \`/media\` (rw), \`/addon_configs\` (rw), \`/ssl\` (ro), \`/backup\` (ro).
+- Anything outside these mounts is ephemeral and is lost when the add-on restarts.
+
+## Talking to Home Assistant
+The environment variable \`SUPERVISOR_TOKEN\` authenticates against:
+- Core REST API: \`http://supervisor/core/api/\`
+  e.g. \`curl -s -H "Authorization: Bearer \$SUPERVISOR_TOKEN" http://supervisor/core/api/states\`
+- Supervisor API: \`http://supervisor/\`
+  e.g. validate config: \`curl -s -X POST -H "Authorization: Bearer \$SUPERVISOR_TOKEN" http://supervisor/core/check\`
+  e.g. core logs: \`curl -s -H "Authorization: Bearer \$SUPERVISOR_TOKEN" http://supervisor/core/logs\`
+
+## Working rules
+1. Before editing YAML under \`/config\`, read the relevant files and follow the existing structure (\`!include\`, packages, etc.).
+2. After changing configuration, validate it with the \`/core/check\` endpoint before asking to restart or reload.
+3. Prefer reloading the specific domain (e.g. \`automation.reload\`, \`script.reload\`) over restarting Home Assistant.
+4. Never delete or overwrite \`secrets.yaml\`, \`.storage/\` or the database without explicit confirmation.
+5. If \`/config\` is a git repository, commit or show a diff of your changes so the user can review them.
+EOF
+fi
+
+bashio::log.info "Initialization complete (mode: ${AGY_OPT_MODE})."

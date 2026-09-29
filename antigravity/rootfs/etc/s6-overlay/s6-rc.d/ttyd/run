@@ -1,0 +1,14 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+# Ingress web terminal. Only used for first-time sign-in and troubleshooting;
+# day-to-day use happens at https://antigravity.google.com (Remote Control).
+source /usr/local/lib/antigravity/env.sh
+bashio::log.info "Starting ingress console on port 7681"
+exec ttyd \
+    --port 7681 \
+    --writable \
+    --ping-interval 30 \
+    --client-option titleFixed="Antigravity" \
+    --client-option fontSize=14 \
+    --client-option disableLeaveAlert=true \
+    /usr/local/bin/agy-console

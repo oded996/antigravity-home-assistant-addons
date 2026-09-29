@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Show Antigravity Remote Control status inside the add-on.
+source /usr/local/lib/antigravity/env.sh
+
+brief=false
+[[ "${1:-}" == "--brief" ]] && brief=true
+
+if [[ ! -x "${AGY_BIN}" ]]; then
+    echo "agy is not installed yet (see add-on log)."
+    exit 1
+fi
+
+echo "Mode:        ${AGY_OPT_MODE:-daemon}"
+echo "Instance:    ${AGY_OPT_INSTANCE_NAME:-home-assistant}"
+echo "CLI version: $("${AGY_BIN}" --version 2>/dev/null | head -n1)"
+echo
+PATH="${AGY_SHIM_DIR}:${PATH}" timeout 30 "${AGY_BIN}" remote-control status 2>&1 | sed 's/^/  /'
+
+if ! $brief; then
+    echo
+    echo "Processes:"
+    ps -eo pid,etime,args | grep -E "[a]gy|[a]ntigravity" | grep -v agy-status | sed 's/^/  /'
+    if [[ -f "${AGY_STATE_DIR}/systemctl-shim.log" ]]; then
+        echo
+        echo "Recent systemctl shim calls:"
+        tail -n 5 "${AGY_STATE_DIR}/systemctl-shim.log" | sed 's/^/  /'
+    fi
+fi

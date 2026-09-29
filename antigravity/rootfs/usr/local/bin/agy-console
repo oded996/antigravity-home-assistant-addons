@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Entry point for the ingress terminal: a persistent tmux "console" session.
+source /usr/local/lib/antigravity/env.sh
+agy_ssh_env
+cd "${AGY_WORKSPACE}" 2>/dev/null || cd "${HOME}"
+exec tmux -L console new-session -A -s console \
+    "bash --rcfile /usr/local/lib/antigravity/bashrc -i"

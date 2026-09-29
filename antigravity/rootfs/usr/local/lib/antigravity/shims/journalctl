@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# journalctl stand-in: point at the add-on log instead.
+echo "journalctl is not available inside the add-on; see the add-on Log tab in Home Assistant." >&2
+exit 0

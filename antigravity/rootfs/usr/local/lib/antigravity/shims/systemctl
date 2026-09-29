@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Minimal systemctl stand-in. `agy remote-control start` expects to register
+# a systemd user service; there is no systemd inside an add-on container.
+# We accept every call, log it, and let s6 run the daemon instead.
+log="${AGY_STATE_DIR:-/data/addon}/systemctl-shim.log"
+mkdir -p "$(dirname "$log")"
+echo "$(date -Is) systemctl $*" >>"$log"
+
+for arg in "$@"; do
+    case "$arg" in
+        is-active) echo "active"; exit 0 ;;
+        is-enabled) echo "enabled"; exit 0 ;;
+        is-failed) echo "active"; exit 1 ;;
+        is-system-running) echo "running"; exit 0 ;;
+        status) echo "● antigravity-cli-daemon.service (managed by Home Assistant add-on / s6)"; echo "   Active: active (running)"; exit 0 ;;
+        show) echo "ActiveState=active"; echo "SubState=running"; echo "LoadState=loaded"; exit 0 ;;
+    esac
+done
+exit 0

@@ -1,0 +1,46 @@
+name: Antigravity
+version: "0.1.0"
+slug: antigravity
+description: >-
+  Run the Google Antigravity agent on your Home Assistant host and drive it
+  from any browser via Antigravity Remote Control.
+url: https://github.com/oded996/antigravity-home-assistant-addons
+arch:
+  - amd64
+  - aarch64
+init: false
+startup: services
+boot: auto
+ingress: true
+ingress_port: 7681
+panel_icon: mdi:rocket-launch-outline
+panel_title: Antigravity
+homeassistant_api: true
+hassio_api: true
+hassio_role: homeassistant
+map:
+  - type: homeassistant_config
+    read_only: false
+    path: /config
+  - type: addon_configs
+    read_only: false
+  - type: share
+    read_only: false
+  - type: media
+    read_only: false
+  - type: ssl
+    read_only: true
+  - type: backup
+    read_only: true
+options:
+  instance_name: home-assistant
+  mode: daemon
+  auto_update: true
+  manage_agents_md: true
+  debug: false
+schema:
+  instance_name: str
+  mode: list(daemon|interactive)
+  auto_update: bool
+  manage_agents_md: bool
+  debug: bool
