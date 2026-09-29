@@ -22,7 +22,7 @@ map:
   - type: homeassistant_config
     read_only: false
     path: /config
-  - type: addon_configs
+  - type: all_addon_configs
     read_only: false
   - type: share
     read_only: false
