@@ -23,71 +23,9 @@ export AGY_OPT_INSTANCE_NAME=$(printf '%q' "$(bashio::config 'instance_name')")
 export AGY_OPT_MODE=$(printf '%q' "$(bashio::config 'mode')")
 export AGY_OPT_AUTO_UPDATE=$(printf '%q' "$(bashio::config 'auto_update')")
 export AGY_OPT_DEBUG=$(printf '%q' "$(bashio::config 'debug')")
-export AGY_OPT_LOCAL_WEB_UI=$(printf '%q' "$(bashio::config 'local_web_ui')")
-export AGY_OPT_INGRESS_PANEL=$(printf '%q' "$(bashio::config 'ingress_panel')")
 EOF
 # shellcheck disable=SC1091
 source "${AGY_STATE_DIR}/options.env"
-
-# --- Experimental local web UI (agy hub) -------------------------------------
-# The hub binds to 127.0.0.1 only; nginx exposes it on 8765 behind basic auth.
-WEB_UI_CONF=/etc/nginx/web_ui.conf
-HTPASSWD=/etc/nginx/antigravity.htpasswd
-: >"${WEB_UI_CONF}"
-rm -f "${HTPASSWD}"
-if bashio::config.true 'local_web_ui'; then
-    if ! bashio::config.has_value 'web_ui_password'; then
-        bashio::log.error "local_web_ui is enabled but web_ui_password is empty; the web UI stays disabled."
-        sed -i 's/^export AGY_OPT_LOCAL_WEB_UI=.*/export AGY_OPT_LOCAL_WEB_UI=false/' "${AGY_STATE_DIR}/options.env"
-        export AGY_OPT_LOCAL_WEB_UI=false
-    else
-        printf '%s:%s\n' "$(bashio::config 'web_ui_username')" \
-            "$(openssl passwd -apr1 "$(bashio::config 'web_ui_password')")" >"${HTPASSWD}"
-        chmod 600 "${HTPASSWD}"
-        listen="listen 8765;"
-        ssl_lines=""
-        scheme="http"
-        if bashio::config.true 'ssl'; then
-            certfile="/ssl/$(bashio::config 'certfile')"
-            keyfile="/ssl/$(bashio::config 'keyfile')"
-            if [[ -f "${certfile}" && -f "${keyfile}" ]]; then
-                listen="listen 8765 ssl;"
-                ssl_lines="ssl_certificate ${certfile}; ssl_certificate_key ${keyfile}; ssl_protocols TLSv1.2 TLSv1.3;"
-                scheme="https"
-            else
-                bashio::log.warning "ssl is enabled but ${certfile} or ${keyfile} is missing; serving the web UI over plain HTTP."
-            fi
-        fi
-        cat >"${WEB_UI_CONF}" <<EOF
-server {
-    ${listen}
-    ${ssl_lines}
-    auth_basic "Antigravity";
-    auth_basic_user_file ${HTPASSWD};
-
-    location / {
-        include /etc/nginx/hub_proxy.conf;
-    }
-}
-EOF
-        bashio::log.info "Experimental local web UI enabled on ${scheme}://<home-assistant-host>:8765"
-    fi
-fi
-
-# --- Ingress panel: terminal (default) or experimental web UI ----------------
-if [[ "${AGY_OPT_INGRESS_PANEL}" == "web_ui" ]]; then
-    cp /etc/nginx/ingress_web_ui.conf /etc/nginx/ingress.conf
-    bashio::log.info "Ingress panel shows the experimental web UI; the setup terminal is at <panel>/terminal/ (the '>_' button)."
-else
-    cp /etc/nginx/ingress_terminal.conf /etc/nginx/ingress.conf
-fi
-
-# The hub process runs if either the panel or the :8765 web UI needs it.
-if [[ "${AGY_OPT_INGRESS_PANEL}" == "web_ui" || "${AGY_OPT_LOCAL_WEB_UI}" == "true" ]]; then
-    echo "export AGY_HUB_ENABLED=true" >>"${AGY_STATE_DIR}/options.env"
-else
-    echo "export AGY_HUB_ENABLED=false" >>"${AGY_STATE_DIR}/options.env"
-fi
 
 # --- Install agy -------------------------------------------------------------
 if [[ ! -x "${AGY_BIN}" ]]; then

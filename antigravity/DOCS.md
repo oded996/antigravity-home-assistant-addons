@@ -69,33 +69,6 @@ MCP config. Inside the add-on, `~` is `/data/home`.
 | `manage_agents_md` | `true` | Regenerate the global agent rules with Home Assistant context |
 | `enable_ha_mcp` | `true` | Install/upgrade [ha-mcp](https://github.com/homeassistant-ai/ha-mcp) and register it as the `home-assistant` MCP server in `~/.gemini/config/mcp_config.json`. Other servers in that file are kept, as long as it stays valid JSON. |
 | `debug` | `false` | Verbose add-on script logging |
-| `local_web_ui` | `false` | **Experimental.** Serve the local web UI on port 8765 (see below) |
-| `web_ui_username` | `admin` | Basic-auth username for the local web UI |
-| `web_ui_password` | *(empty)* | Basic-auth password. Required: the web UI won't start without it. |
-| `ssl` | `false` | Serve the local web UI over HTTPS |
-| `certfile` / `keyfile` | `fullchain.pem` / `privkey.pem` | Certificate and key in `/ssl`, used when `ssl: true` |
-
-### Experimental: local web UI
-
-The CLI has an undocumented "hub" mode that serves the full Antigravity web UI locally. Turn it on to use the agent from your LAN without going through antigravity.google.com:
-
-```yaml
-local_web_ui: true
-web_ui_username: admin
-web_ui_password: "choose-a-strong-password"
-ssl: false            # true = serve HTTPS using /ssl/<certfile> and /ssl/<keyfile>
-certfile: fullchain.pem
-keyfile: privkey.pem
-```
-
-Restart the add-on, then open `http://homeassistant.local:8765` (or `https://…` with `ssl: true`) and sign in with the username and password.
-
-- The hub runs as a separate process on `127.0.0.1:18765` inside the container. nginx publishes it on port 8765 behind HTTP basic auth. **The web UI stays disabled if `web_ui_password` is empty.**
-- It uses the same sign-in, workspace (`/config`), MCP servers and rules as Remote Control, and Remote Control keeps working alongside it.
-- You can change or disable the host port in the add-on's **Network** section.
-
-> [!WARNING]
-> Hub mode is hidden, unsupported, and may change or disappear in any CLI update. Anyone who gets past the password has full agent access to your home. Use a strong password and `ssl: true`, and **never** forward port 8765 to the internet. If something doesn't work, check the add-on log for `hub:` lines and `/data/addon/hub.log`.
 
 ## Setup console commands
 
@@ -118,8 +91,7 @@ Restart the add-on, then open `http://homeassistant.local:8765` (or `https://…
   can only be changed from the CLI.
 - **Remote access** is tied to your Google account, so use 2-step verification.
 - **The setup console** is only reachable through Home Assistant ingress. nginx
-  admits only the ingress gateway. Port 8765 is only served when the
-  experimental local web UI is enabled, and it always requires a password.
+  admits only the ingress gateway, and no host ports are exposed.
 - **Credentials.** Your Antigravity token and the MCP config (which contains
   the Supervisor token) are stored in `/data` and included in backups of this
   add-on, so use encrypted backups.

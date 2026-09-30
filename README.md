@@ -148,11 +148,6 @@ Everything outside the mounts listed above disappears when the add-on restarts, 
 | `manage_agents_md` | `true` | Regenerate `~/.gemini/AGENTS.md` with Home Assistant context on every start. Turn this off to maintain your own. |
 | `enable_ha_mcp` | `true` | Install/update ha-mcp and register it as the `home-assistant` MCP server |
 | `debug` | `false` | Verbose logging from the add-on scripts |
-| `local_web_ui` | `false` | **Experimental.** Serve the local web UI on port 8765 (see below) |
-| `web_ui_username` | `admin` | Basic-auth username for the local web UI |
-| `web_ui_password` | *(empty)* | Basic-auth password. Required: the web UI won't start without it. |
-| `ssl` | `false` | Serve the local web UI over HTTPS |
-| `certfile` / `keyfile` | `fullchain.pem` / `privkey.pem` | Certificate and key in `/ssl`, used when `ssl: true` |
 
 Example:
 
@@ -164,28 +159,6 @@ manage_agents_md: true
 enable_ha_mcp: true
 debug: false
 ```
-
-### Experimental: local web UI
-
-The CLI has an undocumented "hub" mode that serves the full Antigravity web UI locally. Turn it on to use the agent from your LAN without going through antigravity.google.com:
-
-```yaml
-local_web_ui: true
-web_ui_username: admin
-web_ui_password: "choose-a-strong-password"
-ssl: false            # true = serve HTTPS using /ssl/<certfile> and /ssl/<keyfile>
-certfile: fullchain.pem
-keyfile: privkey.pem
-```
-
-Restart the add-on, then open `http://homeassistant.local:8765` (or `https://…` with `ssl: true`) and sign in with the username and password.
-
-- The hub runs as a separate process on `127.0.0.1:18765` inside the container. nginx publishes it on port 8765 behind HTTP basic auth. **The web UI stays disabled if `web_ui_password` is empty.**
-- It uses the same sign-in, workspace (`/config`), MCP servers and rules as Remote Control, and Remote Control keeps working alongside it.
-- You can change or disable the host port in the add-on's **Network** section.
-
-> [!WARNING]
-> Hub mode is hidden, unsupported, and may change or disappear in any CLI update. Anyone who gets past the password has full agent access to your home. Use a strong password and `ssl: true`, and **never** forward port 8765 to the internet. If something doesn't work, check the add-on log for `hub:` lines and `/data/addon/hub.log`.
 
 ### Adding your own MCP servers or rules
 
@@ -212,7 +185,7 @@ Inside the add-on, `~` is `/data/home`.
 - **Back up before big changes.** Take a Home Assistant backup, or put `/config` under git. If `/config` is a git repo, the agent is told to commit or show a diff of its changes.
 - **Tool approvals.** Edits to files in the workspace (`/config`) happen without a prompt. Under the default permission preset, the agent asks before other actions, such as MCP/Home Assistant tool calls and commands outside the sandbox. You can approve or deny them from the Remote Control UI. Permission settings can only be changed from the CLI (`agy` in the setup console), not from the web UI. See the [permissions docs](https://antigravity.google/docs/permissions).
 - **Remote access** goes through your Google account. Anyone who can sign in to that account can control this instance, so use 2-step verification.
-- **Setup console:** it's only available through Home Assistant ingress, which means admin users. ttyd listens on a UNIX socket behind nginx, and nginx only admits the ingress gateway (`172.30.32.2`). Other add-ons can't open the console. The only host port is 8765, and nothing listens on it unless you enable the experimental local web UI, which always requires a password.
+- **Setup console:** it's only available through Home Assistant ingress, which means admin users. ttyd listens on a UNIX socket behind nginx, and nginx only admits the ingress gateway (`172.30.32.2`). No ports are exposed on the host, and other add-ons can't open the console.
 - **Stored credentials:** two credentials live in the add-on's private `/data`. Your Antigravity sign-in token is stored in a file under `~/.gemini`, since the container has no keyring. The MCP config contains the Supervisor token and is set to `0600`. Both are included in Home Assistant backups of this add-on, so use encrypted backups.
 
 ## Troubleshooting

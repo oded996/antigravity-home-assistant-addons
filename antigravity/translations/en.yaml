@@ -27,26 +27,3 @@ configuration:
   debug:
     name: Debug logging
     description: Log extra diagnostics from the add-on scripts.
-  local_web_ui:
-    name: Local web UI (experimental)
-    description: >-
-      Serve the Antigravity web UI on port 8765 using the CLI's undocumented
-      hub mode, behind basic auth. Requires web_ui_password. Do not expose to
-      the internet.
-  web_ui_username:
-    name: Web UI username
-    description: Basic-auth username for the local web UI.
-  web_ui_password:
-    name: Web UI password
-    description: Basic-auth password for the local web UI (required to enable it).
-  ssl:
-    name: SSL
-    description: Serve the local web UI over HTTPS using the certificate below.
-  certfile:
-    name: Certificate file
-    description: Certificate file in /ssl (used when SSL is enabled).
-  keyfile:
-    name: Key file
-    description: Private key file in /ssl (used when SSL is enabled).
-network:
-  8765/tcp: Experimental local web UI (only active when local_web_ui is enabled)
