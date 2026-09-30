@@ -253,6 +253,12 @@ Issues and pull requests are welcome. If you're testing on a new platform (for e
 - [Gemini Terminal for Home Assistant](https://github.com/oded996/gemini-cli-home-assistant-addons): Gemini CLI in a web terminal
 - [Claude Terminal for Home Assistant](https://github.com/heytcass/home-assistant-addons): Claude Code in a web terminal
 
+## License
+
+The add-on code in this repository is released under the [MIT License](LICENSE).
+
+The add-on doesn't bundle the Antigravity CLI. It's downloaded from Google at runtime and covered by Google's [terms](https://antigravity.google/terms). Other components keep their own licenses: [ha-mcp](https://github.com/homeassistant-ai/ha-mcp), [ttyd](https://github.com/tsl0922/ttyd), [uv](https://github.com/astral-sh/uv) and nginx.
+
 ## Disclaimer
 
 This is a community project. It is **not affiliated with, endorsed by, or supported by Google** or the Home Assistant project. "Google Antigravity" and its logo are trademarks of Google LLC. Using Antigravity is subject to Google's [terms](https://antigravity.google/terms).
