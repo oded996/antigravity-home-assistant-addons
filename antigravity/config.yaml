@@ -1,5 +1,5 @@
 name: Antigravity for Home Assistant
-version: "0.3.0"
+version: "0.3.1"
 slug: antigravity
 description: >-
   Run the Google Antigravity agent on your Home Assistant host and drive it
@@ -43,6 +43,7 @@ options:
   manage_agents_md: true
   enable_ha_mcp: true
   debug: false
+  ingress_panel: terminal
   local_web_ui: false
   web_ui_username: admin
   ssl: false
@@ -55,6 +56,7 @@ schema:
   manage_agents_md: bool
   enable_ha_mcp: bool
   debug: bool
+  ingress_panel: list(terminal|web_ui)
   local_web_ui: bool
   web_ui_username: str
   web_ui_password: password?

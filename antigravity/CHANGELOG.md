@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- EXPERIMENTAL: `ingress_panel: web_ui` shows the Antigravity web UI inside the Home Assistant sidebar panel (no extra password; protected by Home Assistant login). The setup terminal moves to the `>_` button (`<panel>/terminal/`).
+
 ## 0.3.0
 
 - EXPERIMENTAL: optional local web UI (`local_web_ui`) on port 8765, served by the CLI's hub mode behind nginx basic auth (`web_ui_username` / `web_ui_password`), with optional TLS (`ssl`, `certfile`, `keyfile`). Off by default.

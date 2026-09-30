@@ -5,12 +5,13 @@
 #
 # Hub mode is undocumented and gated behind AGY_ENABLE_HUB. The server only
 # binds to 127.0.0.1; nginx publishes it on :8765 behind basic auth (see
-# init-antigravity). Idles when local_web_ui is disabled.
+# init-antigravity) and/or serves it in the ingress panel. Idles when neither
+# local_web_ui nor ingress_panel=web_ui is enabled.
 # ==============================================================================
 source /usr/local/lib/antigravity/env.sh
 set +o errexit +o nounset +o pipefail
 
-if [[ "${AGY_OPT_LOCAL_WEB_UI:-false}" != "true" ]]; then
+if [[ "${AGY_HUB_ENABLED:-false}" != "true" ]]; then
     exec sleep infinity
 fi
 

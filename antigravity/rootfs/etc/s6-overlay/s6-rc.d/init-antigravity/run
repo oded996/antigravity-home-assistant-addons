@@ -24,6 +24,7 @@ export AGY_OPT_MODE=$(printf '%q' "$(bashio::config 'mode')")
 export AGY_OPT_AUTO_UPDATE=$(printf '%q' "$(bashio::config 'auto_update')")
 export AGY_OPT_DEBUG=$(printf '%q' "$(bashio::config 'debug')")
 export AGY_OPT_LOCAL_WEB_UI=$(printf '%q' "$(bashio::config 'local_web_ui')")
+export AGY_OPT_INGRESS_PANEL=$(printf '%q' "$(bashio::config 'ingress_panel')")
 EOF
 # shellcheck disable=SC1091
 source "${AGY_STATE_DIR}/options.env"
@@ -65,21 +66,27 @@ server {
     auth_basic_user_file ${HTPASSWD};
 
     location / {
-        proxy_pass http://127.0.0.1:18765;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection \$connection_upgrade;
-        proxy_set_header Host 127.0.0.1:18765;
-        proxy_set_header Origin http://127.0.0.1:18765;
-        proxy_set_header Authorization "";
-        proxy_read_timeout 1d;
-        proxy_send_timeout 1d;
-        proxy_buffering off;
+        include /etc/nginx/hub_proxy.conf;
     }
 }
 EOF
         bashio::log.info "Experimental local web UI enabled on ${scheme}://<home-assistant-host>:8765"
     fi
+fi
+
+# --- Ingress panel: terminal (default) or experimental web UI ----------------
+if [[ "${AGY_OPT_INGRESS_PANEL}" == "web_ui" ]]; then
+    cp /etc/nginx/ingress_web_ui.conf /etc/nginx/ingress.conf
+    bashio::log.info "Ingress panel shows the experimental web UI; the setup terminal is at <panel>/terminal/ (the '>_' button)."
+else
+    cp /etc/nginx/ingress_terminal.conf /etc/nginx/ingress.conf
+fi
+
+# The hub process runs if either the panel or the :8765 web UI needs it.
+if [[ "${AGY_OPT_INGRESS_PANEL}" == "web_ui" || "${AGY_OPT_LOCAL_WEB_UI}" == "true" ]]; then
+    echo "export AGY_HUB_ENABLED=true" >>"${AGY_STATE_DIR}/options.env"
+else
+    echo "export AGY_HUB_ENABLED=false" >>"${AGY_STATE_DIR}/options.env"
 fi
 
 # --- Install agy -------------------------------------------------------------
