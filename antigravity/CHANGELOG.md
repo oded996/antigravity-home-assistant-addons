@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- Fix 502 Bad Gateway on the setup console (nginx could not access the ttyd socket).
+- Fix broken logo on the add-on info page.
+
 ## 0.2.1
 
 - Rename to "Antigravity for Home Assistant"; add Antigravity icon and logo.
