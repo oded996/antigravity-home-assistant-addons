@@ -2,10 +2,12 @@
 # shellcheck shell=bash
 # Ingress web terminal. Only used for first-time sign-in and troubleshooting;
 # day-to-day use happens at https://antigravity.google.com (Remote Control).
+# ttyd listens on a UNIX socket; nginx (port 7681) only admits HA ingress.
 source /usr/local/lib/antigravity/env.sh
-bashio::log.info "Starting ingress console on port 7681"
+rm -f /run/ttyd.sock
+bashio::log.info "Starting setup console (ttyd on /run/ttyd.sock)"
 exec ttyd \
-    --port 7681 \
+    --interface /run/ttyd.sock \
     --writable \
     --ping-interval 30 \
     --client-option titleFixed="Antigravity" \

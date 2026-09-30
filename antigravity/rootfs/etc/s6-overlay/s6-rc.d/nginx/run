@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bashio
+# shellcheck shell=bash
+# Ingress gate in front of the ttyd socket (allows only 172.30.32.2).
+bashio::log.info "Starting ingress gate (nginx) on port 7681"
+exec nginx -c /etc/nginx/nginx.conf -g "daemon off;"

@@ -17,6 +17,7 @@ RUN apt-get update \
         python3 \
         python3-yaml \
         tmux \
+        nginx \
     && rm -rf /var/lib/apt/lists/*
 
 # ttyd (ingress setup console) is not packaged in bookworm: use upstream static build.

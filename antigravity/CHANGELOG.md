@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1
+
+- Rename to "Antigravity for Home Assistant"; add Antigravity icon and logo.
+- Security: the setup console (ttyd) now listens on a UNIX socket behind nginx that only admits the Home Assistant ingress gateway.
+- Comprehensive README and updated documentation.
+
 ## 0.2.0
 
 - Add Home Assistant MCP server (ha-mcp) via uv, registered as `home-assistant` in `~/.gemini/config/mcp_config.json` (option `enable_ha_mcp`).
