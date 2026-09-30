@@ -13,6 +13,7 @@ RUN apt-get update \
         less \
         nano \
         openssh-client \
+        openssl \
         procps \
         python3 \
         python3-yaml \

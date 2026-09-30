@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0
+
+- EXPERIMENTAL: optional local web UI (`local_web_ui`) on port 8765, served by the CLI's hub mode behind nginx basic auth (`web_ui_username` / `web_ui_password`), with optional TLS (`ssl`, `certfile`, `keyfile`). Off by default.
+
 ## 0.2.2
 
 - Fix 502 Bad Gateway on the setup console (nginx could not access the ttyd socket).
